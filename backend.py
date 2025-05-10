@@ -1,8 +1,22 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse
 import json
 import asyncio
 
 app = FastAPI()
+
+# Rota raiz para checagem de status no Render
+@app.get("/", response_class=HTMLResponse)
+async def read_root():
+    return """
+    <html>
+        <head><title>Quadro Branco - Backend</title></head>
+        <body>
+            <h1>Servidor FastAPI do Quadro Branco</h1>
+            <p>Status: Online ✅</p>
+        </body>
+    </html>
+    """
 
 # "Banco de dados" do grupo
 quadro_dados = {}
@@ -24,11 +38,6 @@ async def websocket_frontend(websocket: WebSocket):
         while True:
             data = await websocket.receive_json()
 
-            # # Exibe o JSON completo formatado
-            # print("📩 JSON recebido do frontend:")
-            # print(json.dumps(data, indent=4, ensure_ascii=False))
-            # print("-" * 40)
-
             usuario = data.get("usuario", "Desconhecido")
             conteudo = data.get("conteudo")
             tipo = data.get('tipo')
@@ -38,7 +47,7 @@ async def websocket_frontend(websocket: WebSocket):
             quadro_dados[usuario] = conteudo
             print(f"📥 {usuario} enviou: {conteudo}")
 
-           # Envia para o Core, se conectado
+            # Envia para o Core, se conectado
             if core_ws:
                 await core_ws.send_json({
                     "grupo": "G1",
@@ -51,8 +60,6 @@ async def websocket_frontend(websocket: WebSocket):
                     }
                 })
 
-
-
             # Envia para todos os frontends (inclusive quem enviou, para testes locais)
             for ws in frontends:
                 await ws.send_json({
@@ -60,7 +67,7 @@ async def websocket_frontend(websocket: WebSocket):
                     "tipo": tipo,
                     "acao": acao,
                     "conteudo": conteudo
-            })
+                })
 
     except Exception as e:
         frontends.remove(websocket)
